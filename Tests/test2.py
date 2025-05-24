@@ -1,20 +1,27 @@
-#Find ID
+#Find Player count
 import sys
 import requests
-from bs4 import BeautifulSoup
 
 if len(sys.argv) < 2:
-    print("Usage: python test_extract_app_id.py <game name>")
+    print("Usage: python test_steam_api_player_count.py <app_id>")
     sys.exit(1)
 
-game_name = ' '.join(sys.argv[1:])
-search_url = f"https://steamcharts.com/search/?q={game_name}"
+app_id = sys.argv[1]
+api_url = f"https://api.steampowered.com/ISteamUserStats/GetNumberOfCurrentPlayers/v1/?appid={app_id}"
+print(f"Requesting Steam API: {api_url}")
 
-response = requests.get(search_url)
-soup = BeautifulSoup(response.text, 'html.parser')
-result = soup.select_one("a[href^='/app/']")
-if not result:
-    print("Game not found.")
+response = requests.get(api_url)
+print(f"Status code: {response.status_code}")
+if response.status_code != 200:
+    print("Failed to get data from Steam API.")
+    sys.exit(1)
+
+data = response.json()
+print("Raw JSON response:")
+print(data)
+
+if 'response' in data and data['response'].get('result') == 1:
+    player_count = data['response'].get('player_count')
+    print(f"Current player count: {player_count}")
 else:
-    app_id = result['href'].split('/')[-1]
-    print(f"Extracted app_id: {app_id}")
+    print("No valid player count found in response.")
