@@ -23,15 +23,35 @@ def get_current_players(app_id):
         return data['response'].get('player_count')
     return None
 
+def get_release_date(app_id):
+    url = f"https://store.steampowered.com/app/{app_id}"
+    res = requests.get(url)
+    if res.status_code != 200:
+        return "N/A"
+    soup = BeautifulSoup(res.text, 'html.parser')
+
+    release_date_div = soup.find("div", class_="release_date")
+    if not release_date_div:
+        return "N/A"
+
+    date_div = release_date_div.find("div", class_="date")  
+    if date_div:
+        return date_div.text.strip()
+
+    return "N/A"
+
+
 def get_additional_stats(app_id):
     url = f"https://steamcharts.com/app/{app_id}"
     res = requests.get(url)
     if res.status_code != 200:
         return {}
+
     soup = BeautifulSoup(res.text, 'html.parser')
 
     stats = {}
 
+    # All-time peak players
     all_time_peak_div = None
     for div in soup.find_all("div", class_="app-stat"):
         if div.get_text(strip=True).lower().endswith("all-time peak"):
@@ -43,17 +63,8 @@ def get_additional_stats(app_id):
     else:
         stats['all_time_peak'] = "N/A"
 
-    release_date = "N/A"
-    info_div = soup.select_one("div.game-header-info")
-    if info_div:
-        for child in info_div.find_all("div"):
-            strong = child.find("strong")
-            if strong and "released" in strong.text.lower():
-                span = child.find("span")
-                if span:
-                    release_date = span.text.strip()
-                break
-    stats['release_date'] = release_date
+    # Release date from Steam Store page
+    stats['release_date'] = get_release_date(app_id)
 
     return stats
 
